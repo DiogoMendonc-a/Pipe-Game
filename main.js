@@ -459,7 +459,7 @@
         const blockedTexture = await loadTexture('textures/blocked.png');
 
         const emptyTexture = await loadTexture('textures/empty.png');
-        
+
         const crossTexture = await loadTexture('textures/cross.png');
         const straigthTexture = await loadTexture('textures/straight.png');
         const curvedTexture  = await loadTexture('textures/curved.png');
@@ -536,6 +536,7 @@
             waterTickPhase++;
             if(waterTickPhase === 1) {
                 pickWaterGoal();
+                if(lost) return;
                 new WaterSideTile(waterHeadTile.x, waterHeadTile.y, waterHeadTile.tileSize, waterGoalDirection)
             }
             if(waterTickPhase === 2) {
