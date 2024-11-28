@@ -13,7 +13,7 @@
         const MINIMUM_GOAL_LENGTH = 5
         const MAXIMUM_GOAL_LENGTH = 10
 
-        const DELAY_UNTIL_WATER_FLOW = 5000.0
+        const DELAY_UNTIL_WATER_FLOW = 10000.0
         const WATER_TICK_TIME = 1000.0
 
         const TEXT_FONT_SIZE = 64
@@ -455,7 +455,7 @@
         document.body.appendChild(app.canvas)
 
         // Set window size
-        let ratio = (GRID_WIDTH * TILE_SIZE + GRID_HORIZONTAL_OFFSET) / (GRID_HEIGHT * TILE_SIZE + GOAL_TEXT_SIZE)
+        let ratio = (GRID_WIDTH * TILE_SIZE + GRID_HORIZONTAL_OFFSET) / (GRID_HEIGHT * TILE_SIZE + GOAL_TEXT_SIZE * 2)
         resize()
         window.onresize = resize
  
@@ -504,6 +504,7 @@
         var goalLength = Math.floor(Math.random() * (MAXIMUM_GOAL_LENGTH - MINIMUM_GOAL_LENGTH) + MINIMUM_GOAL_LENGTH)
         var waterLength = 0
 
+
         const goalText = new PIXI.Text({
             text: 'Goal: ' + goalLength,
             style: {
@@ -518,11 +519,26 @@
         goalText.zIndex = 10
         setTextHeight(goalText, GOAL_TEXT_SIZE)
         app.stage.addChild(goalText)
-
+        
         // Set water tick phases
         let waterTickPhase = 0
         var waterGoalTile
         var waterGoalDirection
+        
+        const countdownText = new PIXI.Text({
+            text: 'Water in: ' + initCooldown,
+            style: {
+                fontFamily: 'Arial',
+                fontSize: TEXT_FONT_SIZE,
+                fill: 0x1111ff,
+                align: 'top-left',
+            }
+        })
+        countdownText.x = 0
+        countdownText.y = TILE_SIZE * GRID_HEIGHT + GOAL_TEXT_SIZE
+        countdownText.zIndex = 10
+        setTextHeight(countdownText, GOAL_TEXT_SIZE)
+        app.stage.addChild(countdownText)
 
         // Water update function
         app.ticker.add(() => {
@@ -531,6 +547,12 @@
             }
             if(initCooldown > 0) {
                 initCooldown -= app.ticker.deltaMS
+                if(initCooldown <= 0) {
+                    countdownText.text = 'Water flowing!'
+                }
+                else {
+                    countdownText.text = 'Water in: ' + (initCooldown / 1000).toFixed(2)
+                }
                 return
             }
             if(waterCooldown > 0) {
