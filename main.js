@@ -2,29 +2,46 @@
 (async () =>
     {
         // Game Values
+        // Grid
         const GRID_WIDTH = 9
         const GRID_HEIGHT = 7
         const TILE_SIZE = 32
         const MAX_BLOCKED_TILES = 8
-        const GRID_HORIZONTAL_OFFSET = 64
+        const GRID_HORIZONTAL_OFFSET = 64 // How wide a margin to leave to the right of the grid.
 
+        // Tile queue 
         const QUEUE_SIZE = 5
 
+        // Objective
         const MINIMUM_GOAL_LENGTH = 5
         const MAXIMUM_GOAL_LENGTH = 10
 
+        // Water timers
         const DELAY_UNTIL_WATER_FLOW = 10000.0
         const WATER_TICK_TIME = 1000.0
 
+        // Text
         const TEXT_FONT_SIZE = 64
         const GOAL_TEXT_SIZE = 18
         const END_TEXT_SIZE = 24
 
+        // Screen shake
         const SCREEN_SHAKE_TIME = 100.0
         const SCREEN_SHAKE_AMPLITUDE = 2
         const SCREEN_SHAKE_SPEED = 20
 
+        /**
+         * Grid representing the game area.
+         */
         class Grid {
+            /**
+             * 
+             * @param {number} width Number of tiles per row.
+             * @param {number} height Number of tiles per column.
+             * @param {number} tileSize Width or height of each tile, in pixels. Tiles are assumed square.
+             * @param {number} maxBlockedTiles Maximum number of tile where the player can't place pipes.
+             * @param {number} offset Number of pixels the entire grid is moved horizontally.
+             */
             constructor(width, height, tileSize, maxBlockedTiles, offset) {
                 this.width = width
                 this.height = height
@@ -67,11 +84,22 @@
 
             }
 
+            /**
+             * Gets the tile in given coordinates.
+             * @param {number} x The x coordinate.
+             * @param {number} y The y coordinate.
+             * @returns {Tile} The tile in the coordinates.
+             */
             getTile(x, y) {
                 return this.tiles[x * this.width + y]
             }
 
-
+            /**
+             * Gets the tile that neighbours another in a given direction.
+             * @param {GridTile} tile Target tile.
+             * @param {Directions} direction Direction in which to search.
+             * @returns {Tile} The neighbouring tile if it exists, `null` otherwise
+             */
             getNeighbour(tile, direction) {
                 switch (direction) {
                     case Directions.UP:
@@ -101,7 +129,15 @@
             }
         }
         
+        // A tile to be drawn in the world.
         class Tile {
+            /**
+             * 
+             * @param {number} x Horizontal position of the tile.
+             * @param {number} y Vertical position of the tile.
+             * @param {number} tileSize Tile width in pixels.
+             * @param {number} angle rotation of the tile in degrees.
+             */
             constructor(x, y, tileSize, angle) {
                 this.x = x
                 this.y = y
@@ -110,12 +146,19 @@
                 this.drawOffset = 0
             }
 
+            /**
+             * Creates the tile's sprite.
+             * @param {PIXI.Texture} texture Texture to set.
+             */
             setSprite(texture) {
                 this.sprite = new PIXI.Sprite(texture)
                 app.stage.addChild(this.sprite)
                 this.updateSpriteTransform()
             }
 
+            /**
+             * Updates the transform of the sprite container to reflect the tile's data.
+             */
             updateSpriteTransform() {
                 this.sprite.anchor.set(0.5)
                 this.sprite.x = this.drawOffset + this.x * this.tileSize + this.tileSize / 2
@@ -124,7 +167,17 @@
             }
         }
 
+        /**
+         * Tile that can hold a pipe.
+         */
         class PipeTile extends Tile {
+            /**
+             * 
+             * @param {number} x Horizontal position of the tile.
+             * @param {number} y Vertical position of the tile.
+             * @param {number} tileSize Tile width in pixels.
+             * @param {TileType} type The Type of this tile.
+             */
             constructor(x, y, tileSize, type) {
                 super(x, y, tileSize, type.getAngle())
                 this.type = type
@@ -135,6 +188,10 @@
                 super.setSprite(this.type.texture)
             }
 
+            /**
+             * Sets the type of this tyle, reloading its sprite.
+             * @param {TileType} type Type to be set.
+             */
             setType(type) {
                 this.type = type
                 this.angle = this.type.getAngle()
@@ -142,7 +199,17 @@
             }
         }
 
+        /**
+         * Tile belonging to the playable grid.
+         */
         class GridTile extends PipeTile {
+            /**
+             * 
+             * @param {number} x Horizontal position of the tile.
+             * @param {number} y Vertical position of the tile.
+             * @param {number} tileSize Tile width in pixels.
+             * @param {TileType} type The Type of this tile.
+             */
             constructor(x, y, tileSize, type) { 
                 super(x, y, tileSize, type)
                 this.openConnections = type.getConnections()
@@ -152,7 +219,7 @@
             setSprite() {
                 super.setSprite(this.type.texture)
                 if(this.type.replaceable) {
-                    this.sprite.on('pointerdown', () => { onTilePressed(this) })
+                    this.sprite.on('pointerdown', () => { deployPipeOnTile(this) })
                     this.sprite.eventMode = 'static'
                 }
             }
@@ -162,10 +229,19 @@
                 this.openConnections = type.getConnections()
             }            
 
+            /**
+             * Checks if a connection from the tile is traversable.
+             * @param {Directions} direction Direction to test.
+             * @returns {boolean} Wether that direction is still traversable.
+             */
             canConnectTo(direction) {
                     return this.openConnections.includes(direction)
             }
 
+            /**
+             * Closes a direction, forbiding further water passage.
+             * @param {Directions} direction Direction to close.
+             */
             closeConnection(direction) {
                 var oldConnections = this.openConnections
                 this.openConnections = []
@@ -177,16 +253,31 @@
             }
         }
 
+        /**
+         * Holds the data for each type of tile.
+         */
         class TileType {
+            /**
+             * 
+             * @param {PIXI.Texture} texture The type's texture.
+             */
             constructor(texture) {
                 this.texture = texture
                 this.replaceable = true
             }
 
+            /**
+             * The angle the sprite must be rotate by when displaying tiles of this type.
+             * @returns {number} Angle
+             */
             getAngle() {
                 return 0
             }
 
+            /**
+             * Connections this type of tile can accept.
+             * @returns {Directions} Connections directions.
+             */
             getConnections() {
                 return []
             }
@@ -278,6 +369,9 @@
             }  
         }
         
+        /**
+         * Tile to be drawn on top of the grid, representing the water flow.
+         */
         class WaterOverlayTile extends Tile {
         }
 
@@ -313,11 +407,19 @@
             }
         }
 
+        /**
+         * Picks a random tile type from the available types.
+         * @returns A random Tile.
+         */
         function getRandomTileType() {
             return tileTypes[Math.floor(Math.random() * tileTypes.length)]
         }
 
-        function onTilePressed(tile) {
+        /**
+         * Replaces a tile's type, if the tile allows it.
+         * @param {GridTile} tile Tile that was pressed.
+         */
+        function deployPipeOnTile(tile) {
             if(lost) return
             if(!tile.type.replaceable) return
             if(tile.locked) return
@@ -333,6 +435,11 @@
             screenShakeRemainingTime = SCREEN_SHAKE_TIME
         }
 
+        /**
+         * Picks a neighbouring tile to the water head for the water to flow towards.
+         * If it is not found, loss is triggered.
+         * If it is found, the connection is closed and water begins to flow through the segment.
+         */
         function pickWaterGoal() {
             var validNeighbours = []
             waterHeadTile.openConnections.forEach((connection) => {
@@ -375,6 +482,9 @@
             waterGoalTile.locked = true
         }
 
+        /**
+         * Wraps up water movement towards a tile and checks for victory.
+         */
         function finishWaterTick() {
             waterHeadTile = waterGoalTile
             waterLength += 1
@@ -398,6 +508,9 @@
             }
         }
 
+        /**
+         * Resizes the renderer and stage to fit without windows of varying sizes.
+         */
         function resize() {
             if (window.innerWidth / window.innerHeight >= ratio) {
                 var w = window.innerHeight * ratio
@@ -424,6 +537,11 @@
             LEFT:   3
         })
 
+        /**
+         * Gets the direction opposite of the one given.
+         * @param {Directions} direction 
+         * @returns Opposite direction.
+         */
         function getOppositeDirection(direction) {
             switch (direction) {
                 case Directions.UP:
@@ -437,12 +555,22 @@
             }
         }
 
+        /**
+         * Changes text height, while maintaining the container's aspect ratio.
+         * @param {PIXI.Text} text Text object to modify.
+         * @param {*} height Target height.
+         */
         function setTextHeight(text, height) {
             let ratio =  text.width / text.height
             text.height = height
             text.width = height * ratio
         }
 
+        /**
+         * Loads a texture from a file.
+         * @param {String} path Path to file containing the texture.
+         * @returns Loaded texture.
+         */
         async function loadTexture(path) {
             let texture = await PIXI.Assets.load(path)
             texture.source. scaleMode = PIXI.SCALE_MODES.NEAREST
