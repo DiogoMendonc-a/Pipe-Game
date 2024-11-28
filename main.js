@@ -20,6 +20,10 @@
         const GOAL_TEXT_SIZE = 18
         const END_TEXT_SIZE = 24
 
+        const SCREEN_SHAKE_TIME = 100.0
+        const SCREEN_SHAKE_AMPLITUDE = 2
+        const SCREEN_SHAKE_SPEED = 20
+
         class Grid {
             constructor(width, height, tileSize, maxBlockedTiles, offset) {
                 this.width = width
@@ -326,6 +330,7 @@
             })
 
             queue.push(new PipeTile(0, 0, queue[0].tileSize, getRandomTileType()))
+            screenShakeRemainingTime = SCREEN_SHAKE_TIME
         }
 
         function pickWaterGoal() {
@@ -550,4 +555,16 @@
             waterCooldown = WATER_TICK_TIME
         })
 
+        // Screen shake
+        let screenShakeRemainingTime = 0
+        app.ticker.add(() => { 
+            if(screenShakeRemainingTime <= 0) {
+                app.stage.position.x = 0
+                app.stage.position.y = 0
+                return
+            }
+            app.stage.position.x = Math.sin(screenShakeRemainingTime * SCREEN_SHAKE_SPEED) * SCREEN_SHAKE_AMPLITUDE
+            app.stage.position.y = Math.sin(screenShakeRemainingTime * SCREEN_SHAKE_SPEED * SCREEN_SHAKE_SPEED) * SCREEN_SHAKE_AMPLITUDE
+            screenShakeRemainingTime -= app.ticker.deltaMS
+        })
     })()
