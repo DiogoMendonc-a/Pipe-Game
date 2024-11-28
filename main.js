@@ -37,7 +37,7 @@
                     for (let j = 0; j < this.height; j++) {
                         this.tiles[i * width + j] = new GridTile(i, j, tileSize, emptyType)
                         this.tiles[i * width + j].drawOffset = this.offset
-                        this.tiles[i * width + j].updateSprite()
+                        this.tiles[i * width + j].updateSpriteTransform()
                     }
                 }
                 
@@ -113,10 +113,10 @@
             setSprite(texture) {
                 this.sprite = new PIXI.Sprite(texture)
                 app.stage.addChild(this.sprite)
-                this.updateSprite()
+                this.updateSpriteTransform()
             }
 
-            updateSprite() {
+            updateSpriteTransform() {
                 this.sprite.anchor.set(0.5)
                 this.sprite.x = this.drawOffset + this.x * this.tileSize + this.tileSize / 2
                 this.sprite.y = this.y * this.tileSize + this.tileSize / 2
@@ -326,7 +326,7 @@
             queue.shift()
             queue.forEach(element => {
                 element.y += 1
-                element.updateSprite()
+                element.updateSpriteTransform()
             })
 
             queue.push(new PipeTile(0, 0, queue[0].tileSize, getRandomTileType()))
